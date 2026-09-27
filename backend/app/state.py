@@ -1,5 +1,8 @@
-from typing import Literal
+from typing import Annotated, Literal
+
 from typing_extensions import TypedDict
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
 
 
 HRCategory = Literal[
@@ -14,3 +17,4 @@ class HRState(TypedDict, total=False):
     question: str
     category: HRCategory
     response: str
+    messages: Annotated[list[AnyMessage], add_messages]

@@ -1,5 +1,5 @@
 import os
-
+from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, START, StateGraph
@@ -54,39 +54,51 @@ tool_node = ToolNode(tools)
 def agent_node(state: HRState) -> dict:
     """
     Ask the LLM to process the employee request.
-
-    The LLM can decide whether an HR tool is required.
     """
 
     messages = state.get("messages", [])
 
-    if not messages:
-        messages = [
-            ("human", state["question"])
-        ]
-
-    response = llm_with_tools.invoke(
-        [
-            (
-                "system",
-                """You are an HR onboarding assistant.
-
-Use the available tools when the employee's question requires
-employee data or HR policy information.
-
-Do not invent employee information or HR policy.
-
-If a tool can provide the required information, use the tool.
-If no tool is needed, answer the employee directly.""",
-            ),
-            *messages,
-        ]
+    system_message = SystemMessage(
+        content=(
+            "You are an HR onboarding assistant.\n\n"
+            "Use the available tools when the employee's question "
+            "requires employee data or HR policy information.\n\n"
+            "Do not invent employee information or HR policy.\n\n"
+            "If a tool can provide the required information, use the tool.\n"
+            "If a tool has already provided information, use that information "
+            "to answer the employee's question directly.\n"
+            "If no tool is needed, answer the employee directly."
+        )
     )
+
+    # First agent call
+    if not messages:
+        human_message = HumanMessage(
+            content=state["question"]
+        )
+
+        response = llm_with_tools.invoke(
+            [
+                system_message,
+                human_message,
+            ]
+        )
+
+        return {
+            "messages": [
+                human_message,
+                response,
+            ]
+        }
+
+    # Subsequent agent calls after a tool execution.
+    # Do not add the SystemMessage again because Gemini
+    # requires the function-call/tool-response turn order.
+    response = llm_with_tools.invoke(messages)
 
     return {
         "messages": [response]
     }
-
 
 # ============================================================
 # Tool Routing
