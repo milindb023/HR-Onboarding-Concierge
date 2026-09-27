@@ -10,6 +10,10 @@ from .tools.hr_tools import (
     lookup_employee,
     search_hr_policy,
 )
+from .state import HRState
+
+from .persistence import checkpointer
+
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
 load_dotenv()
@@ -339,4 +343,73 @@ builder.add_edge(
 
 # Compile graph
 
-graph = builder.compile()
+graph = builder.compile(
+    checkpointer=checkpointer
+)
+
+def run_ticket(question: str, thread_id: str) -> dict:
+    """
+    Run an HR onboarding request using a persistent thread.
+
+    A new thread starts with the question field.
+    An existing thread receives the new question as a HumanMessage
+    so the conversation can continue from the saved checkpoint.
+    """
+
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
+        }
+    }
+
+    existing_state = graph.get_state(config)
+
+    if existing_state.values.get("messages"):
+        return graph.invoke(
+            {
+                "question": question,
+                "messages": [
+                    HumanMessage(content=question)
+                ],
+            },
+            config,
+        )
+
+    return graph.invoke(
+        {
+            "question": question,
+        },
+        config,
+    )
+
+
+def stream_ticket(question: str, thread_id: str):
+    """
+    Stream an HR onboarding request using a persistent thread.
+    """
+
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
+        }
+    }
+
+    existing_state = graph.get_state(config)
+
+    if existing_state.values.get("messages"):
+        input_state = {
+            "question": question,
+            "messages": [
+                HumanMessage(content=question)
+            ],
+        }
+    else:
+        input_state = {
+            "question": question,
+        }
+
+    return graph.stream(
+        input_state,
+        config,
+        stream_mode="values",
+    )
