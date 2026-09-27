@@ -1,3 +1,4 @@
+import operator
 from typing import Annotated, Literal
 
 from typing_extensions import TypedDict
@@ -27,6 +28,9 @@ class HRState(TypedDict, total=False):
     # Step 6 - Input guardrails
     guardrail_blocked: bool
     guardrail_reason: str
+
+    # Step 7 - Specialist findings
+    specialist_findings: Annotated[list[str], operator.add]
 
     # Step 3 - ReAct safety controls
     iteration_count: int
