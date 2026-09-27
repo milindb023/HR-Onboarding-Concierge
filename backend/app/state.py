@@ -17,7 +17,12 @@ class HRState(TypedDict, total=False):
     question: str
     category: HRCategory
     response: str
+
+    # Conversation messages
     messages: Annotated[list[AnyMessage], add_messages]
+
+    # Step 5 - Context summarization
+    conversation_summary: str
 
     # Step 3 - ReAct safety controls
     iteration_count: int
