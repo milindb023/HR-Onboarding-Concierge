@@ -1,4 +1,5 @@
 import os
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -10,17 +11,17 @@ from .tools.hr_tools import (
     lookup_employee,
     search_hr_policy,
 )
-from .state import HRState
-
 from .persistence import checkpointer
+
 
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
+
 load_dotenv()
 
 
 # ============================================================
-# LLM - OpenRouter
+# LLM - Gemini
 # ============================================================
 
 gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -30,6 +31,7 @@ if not gemini_api_key:
         "GEMINI_API_KEY is not loaded. "
         "Check the .env file in the project root."
     )
+
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-3.8-flash",
@@ -124,6 +126,7 @@ def agent_node(state: HRState) -> dict:
         "tool_call_history": new_tool_call_history,
     }
 
+
 # ============================================================
 # Tool Routing
 # ============================================================
@@ -167,6 +170,7 @@ def should_continue(state: HRState) -> str:
             return "escalate"
 
     return "tools"
+
 
 # ============================================================
 # Step 1 - LLM Classification
@@ -268,84 +272,92 @@ def route_category(state: HRState) -> str:
 
 
 # ============================================================
-# Build Step 1 Graph
+# Escalation Node
+# ============================================================
+
+def escalation_node(state: HRState) -> dict:
+    return {
+        "escalated": True,
+        "response": (
+            "The request requires human review because "
+            "the agent reached a safety limit."
+        ),
+    }
+
+
+# ============================================================
+# Build Main Agent Graph
 # ============================================================
 
 builder = StateGraph(HRState)
 
-builder.add_node("classify", classify_node)
 
+# Agent node
 builder.add_node(
-    "paperwork",
-    paperwork_handler,
-)
-
-builder.add_node(
-    "access",
-    access_handler,
-)
-
-builder.add_node(
-    "benefits",
-    benefits_handler,
-)
-
-builder.add_node(
-    "payroll",
-    payroll_handler,
+    "agent",
+    agent_node,
 )
 
 
-# START -> classify
+# Tool node
+builder.add_node(
+    "tools",
+    tool_node,
+)
 
+
+# Escalation node
+builder.add_node(
+    "escalate",
+    escalation_node,
+)
+
+
+# START -> agent
 builder.add_edge(
     START,
-    "classify",
+    "agent",
 )
 
 
-# classify -> category handler
-
+# agent -> tools / end / escalate
 builder.add_conditional_edges(
-    "classify",
-    route_category,
+    "agent",
+    should_continue,
     {
-        "PAPERWORK": "paperwork",
-        "ACCESS": "access",
-        "BENEFITS": "benefits",
-        "PAYROLL": "payroll",
+        "tools": "tools",
+        "end": END,
+        "escalate": "escalate",
     },
 )
 
 
-# Category handlers -> END
-
+# tools -> agent
 builder.add_edge(
-    "paperwork",
-    END,
+    "tools",
+    "agent",
 )
 
-builder.add_edge(
-    "access",
-    END,
-)
 
+# escalate -> END
 builder.add_edge(
-    "benefits",
-    END,
-)
-
-builder.add_edge(
-    "payroll",
+    "escalate",
     END,
 )
 
 
-# Compile graph
+# ============================================================
+# Compile Graph With SQLite Persistence
+# ============================================================
 
 graph = builder.compile(
     checkpointer=checkpointer
 )
+
+
+# ============================================================
+# Persistent Ticket Entry Point
+# ============================================================
 
 def run_ticket(question: str, thread_id: str) -> dict:
     """
@@ -382,6 +394,10 @@ def run_ticket(question: str, thread_id: str) -> dict:
         config,
     )
 
+
+# ============================================================
+# Persistent Streaming Entry Point
+# ============================================================
 
 def stream_ticket(question: str, thread_id: str):
     """
