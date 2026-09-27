@@ -18,3 +18,8 @@ class HRState(TypedDict, total=False):
     category: HRCategory
     response: str
     messages: Annotated[list[AnyMessage], add_messages]
+
+    # Step 3 - ReAct safety controls
+    iteration_count: int
+    tool_call_history: list[str]
+    escalated: bool
