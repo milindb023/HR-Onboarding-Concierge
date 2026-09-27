@@ -24,6 +24,10 @@ class HRState(TypedDict, total=False):
     # Step 5 - Context summarization
     conversation_summary: str
 
+    # Step 6 - Input guardrails
+    guardrail_blocked: bool
+    guardrail_reason: str
+
     # Step 3 - ReAct safety controls
     iteration_count: int
     tool_call_history: list[str]

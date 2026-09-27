@@ -17,7 +17,7 @@ from .summarization import (
     prepare_summary_context,
     build_summary_text,
 )
-
+from .guardrails import evaluate_input
 
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
@@ -133,6 +133,47 @@ Return only the summary.
         for block in result.content
         if isinstance(block, dict)
     ).strip()
+
+# ============================================================
+# Input Guardrail
+# ============================================================
+
+def guardrail_node(state: HRState) -> dict:
+    """
+    Validate the user's request before it reaches the LLM agent.
+
+    Blocked requests never enter the agent/tool loop.
+    """
+
+    result = evaluate_input(state["question"])
+
+    if not result.allowed:
+        return {
+            "guardrail_blocked": True,
+            "guardrail_reason": result.reason,
+            "escalated": True,
+            "response": (
+                "I cannot process this request because it contains "
+                "information or instructions that cannot be handled "
+                "by the HR onboarding assistant."
+            ),
+        }
+
+    return {
+        "guardrail_blocked": False,
+        "guardrail_reason": result.reason,
+    }
+
+
+def route_guardrail(state: HRState) -> str:
+    """
+    Route blocked requests away from the agent/tool workflow.
+    """
+
+    if state.get("guardrail_blocked", False):
+        return "blocked"
+
+    return "allowed"
 # ============================================================
 # Agent Node
 # ============================================================
@@ -442,30 +483,22 @@ builder = StateGraph(HRState)
 
 
 # Agent node
-builder.add_node(
-    "agent",
-    agent_node,
-)
+builder = StateGraph(HRState)
 
+builder.add_node("guardrail", guardrail_node)
+builder.add_node("agent", agent_node)
+builder.add_node("tools", tool_node)
+builder.add_node("escalate", escalation_node)
 
-# Tool node
-builder.add_node(
-    "tools",
-    tool_node,
-)
+builder.add_edge(START, "guardrail")
 
-
-# Escalation node
-builder.add_node(
-    "escalate",
-    escalation_node,
-)
-
-
-# START -> agent
-builder.add_edge(
-    START,
-    "agent",
+builder.add_conditional_edges(
+    "guardrail",
+    route_guardrail,
+    {
+        "allowed": "agent",
+        "blocked": "escalate",
+    },
 )
 
 
