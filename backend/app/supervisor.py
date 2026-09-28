@@ -27,11 +27,11 @@ def supervisor_route(state: HRState) -> SupervisorRoute:
     """
     Decide which specialist should handle the request.
 
-    The supervisor uses the already-classified category.
-    No LLM call is made here.
+    The supervisor uses the classified category.
 
-    If the request has already reached the delegation limit,
-    the supervisor returns FINISH.
+    FINISH is returned when:
+    - the delegation limit has been reached, or
+    - the category is missing/unknown.
     """
 
     delegation_count = state.get("delegation_count", 0)
@@ -45,3 +45,26 @@ def supervisor_route(state: HRState) -> SupervisorRoute:
         return ROUTING_TABLE[category]
 
     return "FINISH"
+
+
+def supervisor_node(state: HRState) -> dict:
+    """
+    Execute one supervisor decision.
+
+    When a specialist is selected, increment the delegation count.
+    FINISH does not create another delegation.
+    """
+
+    route = supervisor_route(state)
+
+    delegation_count = state.get("delegation_count", 0)
+
+    if route == "FINISH":
+        return {
+            "supervisor_route": route,
+        }
+
+    return {
+        "supervisor_route": route,
+        "delegation_count": delegation_count + 1,
+    }

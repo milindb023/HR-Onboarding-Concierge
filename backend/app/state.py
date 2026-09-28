@@ -29,8 +29,12 @@ class HRState(TypedDict, total=False):
     guardrail_blocked: bool
     guardrail_reason: str
 
-    # Step 7 - Specialist findings
+   # Step 7 - Specialist findings
     specialist_findings: Annotated[list[str], operator.add]
+
+    # Step 8 - Supervisor / dispatcher
+    delegation_count: int
+    supervisor_route: str
 
     # Step 3 - ReAct safety controls
     iteration_count: int

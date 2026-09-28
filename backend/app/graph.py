@@ -25,7 +25,7 @@ from .specialists import (
     payroll_graph,
 )
 
-
+from .supervisor import supervisor_node
 
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
@@ -465,8 +465,7 @@ def payroll_handler(state: HRState) -> dict:
 # Category Routing
 # ============================================================
 
-def route_category(state: HRState) -> str:
-    return state["category"]
+
 
 
 # ============================================================
@@ -492,29 +491,15 @@ builder = StateGraph(HRState)
 
 # Agent node
 
-
 builder.add_node("guardrail", guardrail_node)
 builder.add_node("classify", classify_node)
 
-builder.add_node(
-    "paperwork_specialist",
-    paperwork_graph,
-)
+builder.add_node("supervisor", supervisor_node)
 
-builder.add_node(
-    "access_specialist",
-    access_graph,
-)
-
-builder.add_node(
-    "benefits_specialist",
-    benefits_graph,
-)
-
-builder.add_node(
-    "payroll_specialist",
-    payroll_graph,
-)
+builder.add_node("paperwork_specialist", paperwork_graph)
+builder.add_node("access_specialist", access_graph)
+builder.add_node("benefits_specialist", benefits_graph)
+builder.add_node("payroll_specialist", payroll_graph)
 
 builder.add_node("agent", agent_node)
 builder.add_node("tools", tool_node)
@@ -531,17 +516,25 @@ builder.add_conditional_edges(
     },
 )
 
-builder.add_conditional_edges(
+builder.add_edge(
     "classify",
-    route_category,
+    "supervisor",
+)
+
+def route_supervisor(state: HRState) -> str:
+    return state["supervisor_route"]
+
+builder.add_conditional_edges(
+    "supervisor",
+    route_supervisor,
     {
         "PAPERWORK": "paperwork_specialist",
         "ACCESS": "access_specialist",
         "BENEFITS": "benefits_specialist",
         "PAYROLL": "payroll_specialist",
+        "FINISH": END,
     },
 )
-
 builder.add_edge(
     "paperwork_specialist",
     "agent",
@@ -567,7 +560,7 @@ builder.add_conditional_edges(
     should_continue,
     {
         "tools": "tools",
-        "end": END,
+        "end": "supervisor",
         "escalate": "escalate",
     },
 )
