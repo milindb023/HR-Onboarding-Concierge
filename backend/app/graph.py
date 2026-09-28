@@ -18,6 +18,14 @@ from .summarization import (
     build_summary_text,
 )
 from .guardrails import evaluate_input
+from .specialists import (
+    paperwork_graph,
+    access_graph,
+    benefits_graph,
+    payroll_graph,
+)
+
+
 
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
@@ -483,9 +491,31 @@ builder = StateGraph(HRState)
 
 
 # Agent node
-builder = StateGraph(HRState)
+
 
 builder.add_node("guardrail", guardrail_node)
+builder.add_node("classify", classify_node)
+
+builder.add_node(
+    "paperwork_specialist",
+    paperwork_graph,
+)
+
+builder.add_node(
+    "access_specialist",
+    access_graph,
+)
+
+builder.add_node(
+    "benefits_specialist",
+    benefits_graph,
+)
+
+builder.add_node(
+    "payroll_specialist",
+    payroll_graph,
+)
+
 builder.add_node("agent", agent_node)
 builder.add_node("tools", tool_node)
 builder.add_node("escalate", escalation_node)
@@ -496,12 +526,41 @@ builder.add_conditional_edges(
     "guardrail",
     route_guardrail,
     {
-        "allowed": "agent",
+        "allowed": "classify",
         "blocked": "escalate",
     },
 )
 
+builder.add_conditional_edges(
+    "classify",
+    route_category,
+    {
+        "PAPERWORK": "paperwork_specialist",
+        "ACCESS": "access_specialist",
+        "BENEFITS": "benefits_specialist",
+        "PAYROLL": "payroll_specialist",
+    },
+)
 
+builder.add_edge(
+    "paperwork_specialist",
+    "agent",
+)
+
+builder.add_edge(
+    "access_specialist",
+    "agent",
+)
+
+builder.add_edge(
+    "benefits_specialist",
+    "agent",
+)
+
+builder.add_edge(
+    "payroll_specialist",
+    "agent",
+)
 # agent -> tools / end / escalate
 builder.add_conditional_edges(
     "agent",
