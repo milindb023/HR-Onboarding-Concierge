@@ -8,7 +8,7 @@ from .state import HRState
 # ============================================================
 
 def paperwork_specialist_node(state: HRState) -> dict:
-    question = state["question"]
+    question = state["paperwork_question"]
 
     finding = (
         "Paperwork specialist reviewed the request: "
@@ -16,10 +16,6 @@ def paperwork_specialist_node(state: HRState) -> dict:
     )
 
     return {
-        "response": (
-            "The paperwork specialist reviewed your onboarding "
-            "document request."
-        ),
         "specialist_findings": [finding],
     }
 
@@ -49,7 +45,7 @@ paperwork_graph = paperwork_builder.compile()
 # ============================================================
 
 def access_specialist_node(state: HRState) -> dict:
-    question = state["question"]
+    question = state["access_question"]
 
     finding = (
         "Access specialist reviewed the request: "
@@ -57,10 +53,6 @@ def access_specialist_node(state: HRState) -> dict:
     )
 
     return {
-        "response": (
-            "The access specialist reviewed your system "
-            "access request."
-        ),
         "specialist_findings": [finding],
     }
 
@@ -90,7 +82,7 @@ access_graph = access_builder.compile()
 # ============================================================
 
 def benefits_specialist_node(state: HRState) -> dict:
-    question = state["question"]
+    question = state["benefits_question"]
 
     finding = (
         "Benefits specialist reviewed the request: "
@@ -98,10 +90,6 @@ def benefits_specialist_node(state: HRState) -> dict:
     )
 
     return {
-        "response": (
-            "The benefits specialist reviewed your benefits "
-            "request."
-        ),
         "specialist_findings": [finding],
     }
 
@@ -131,7 +119,7 @@ benefits_graph = benefits_builder.compile()
 # ============================================================
 
 def payroll_specialist_node(state: HRState) -> dict:
-    question = state["question"]
+    question = state["payroll_question"]
 
     finding = (
         "Payroll specialist reviewed the request: "
@@ -139,10 +127,6 @@ def payroll_specialist_node(state: HRState) -> dict:
     )
 
     return {
-        "response": (
-            "The payroll specialist reviewed your payroll "
-            "request."
-        ),
         "specialist_findings": [finding],
     }
 

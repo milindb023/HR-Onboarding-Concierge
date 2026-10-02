@@ -32,6 +32,12 @@ class HRState(TypedDict, total=False):
    # Step 7 - Specialist findings
     specialist_findings: Annotated[list[str], operator.add]
 
+    # Step 9 - Parallel specialist inputs
+    paperwork_question: str
+    access_question: str
+    benefits_question: str
+    payroll_question: str
+
     # Step 8 - Supervisor / dispatcher
     delegation_count: int
     supervisor_route: str

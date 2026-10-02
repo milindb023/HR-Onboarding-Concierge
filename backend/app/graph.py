@@ -539,25 +539,19 @@ builder.add_conditional_edges(
         "FINISH": END,
     },
 )
-builder.add_edge(
-    "paperwork_specialist",
-    "agent",
+
+builder.add_conditional_edges(
+    "parallel_dispatch",
+    build_parallel_sends,
 )
 
-builder.add_edge(
-    "access_specialist",
-    "agent",
-)
+builder.add_edge("paperwork_specialist", "synthesizer")
+builder.add_edge("access_specialist", "synthesizer")
+builder.add_edge("benefits_specialist", "synthesizer")
+builder.add_edge("payroll_specialist", "synthesizer")
 
-builder.add_edge(
-    "benefits_specialist",
-    "agent",
-)
+builder.add_edge("synthesizer", "agent")
 
-builder.add_edge(
-    "payroll_specialist",
-    "agent",
-)
 # agent -> tools / end / escalate
 builder.add_conditional_edges(
     "agent",

@@ -8,11 +8,12 @@ print("STEP 9A - PARALLEL SEND TEST")
 print("----------------------------")
 
 
-print("\nTEST 1: EXPECTED SPECIALIST COUNT")
-
 state = {
     "question": "I need help with my onboarding.",
 }
+
+
+print("\nTEST 1: EXPECTED SPECIALIST COUNT")
 
 sends = build_parallel_sends(state)
 
@@ -40,22 +41,39 @@ assert targets == expected_targets
 print("PASS")
 
 
-print("\nTEST 3: EACH SEND PRESERVES THE QUESTION")
+print("\nTEST 3: EACH SPECIALIST RECEIVES THE QUESTION")
+
+expected_question_fields = {
+    "paperwork_specialist": "paperwork_question",
+    "access_specialist": "access_question",
+    "benefits_specialist": "benefits_question",
+    "payroll_specialist": "payroll_question",
+}
 
 for send in sends:
-    assert send.arg["question"] == state["question"]
+    field_name = expected_question_fields[send.node]
+
+    assert send.arg[field_name] == state["question"]
 
 print("PASS")
 
 
-print("\nTEST 4: EACH SEND CONTAINS THE SPECIALIST CATEGORY")
+print("\nTEST 4: EACH BRANCH USES ITS OWN STATE FIELD")
 
-categories = {
-    send.arg["category"]
+actual_fields = {
+    field_name
     for send in sends
+    for field_name in send.arg.keys()
 }
 
-assert categories == set(PARALLEL_SPECIALISTS)
+expected_fields = {
+    "paperwork_question",
+    "access_question",
+    "benefits_question",
+    "payroll_question",
+}
+
+assert actual_fields == expected_fields
 
 print("PASS")
 
