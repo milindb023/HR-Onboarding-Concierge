@@ -31,7 +31,8 @@ class HRState(TypedDict, total=False):
 
    # Step 7 - Specialist findings
     specialist_findings: Annotated[list[str], operator.add]
-
+    specialists_completed: bool
+    
     # Step 9 - Parallel specialist inputs
     paperwork_question: str
     access_question: str

@@ -24,15 +24,8 @@ ROUTING_TABLE: dict[str, SupervisorRoute] = {
 
 
 def supervisor_route(state: HRState) -> SupervisorRoute:
-    """
-    Decide which specialist should handle the request.
-
-    The supervisor uses the classified category.
-
-    FINISH is returned when:
-    - the delegation limit has been reached, or
-    - the category is missing/unknown.
-    """
+    if state.get("specialists_completed", False):
+        return "FINISH"
 
     delegation_count = state.get("delegation_count", 0)
 
