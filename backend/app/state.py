@@ -48,11 +48,13 @@ class HRState(TypedDict, total=False):
     write_idempotency_key: str
     write_result: str
 
-    # Step 11 - Human-in-the-loop approval
+   # Step 11 - Human-in-the-loop approval
     approval_required: bool
     approval_status: str
     approval_request: dict[str, str]
     approval_id: str
+    approval_employee_id: str
+    approval_system: str
 
     # Step 8 - Supervisor / dispatcher
     delegation_count: int

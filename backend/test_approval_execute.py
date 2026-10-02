@@ -115,5 +115,29 @@ assert "step11c-invalid-key" not in MOCK_ACCOUNTS
 
 print("PASS")
 
+print("TEST 3B: EDITED APPROVED REQUEST")
+
+edited_state = {
+    "approval_status": "APPROVED",
+    "approval_request": {
+        "employee_id": "EMP1001",
+        "system": "HR_PORTAL",
+        "severity": "MEDIUM",
+        "idempotency_key": "edited-approval-key",
+        "action": "PROVISION_SYSTEM_ACCOUNT",
+        "status": "PENDING",
+    },
+    "approval_employee_id": "EMP1002",
+    "approval_system": "PAYROLL",
+}
+
+edited_result = execute_approved_write(edited_state)
+
+print(edited_result)
+
+assert "EMP1002" in edited_result["write_result"]
+assert "PAYROLL" in edited_result["write_result"]
+
+print("PASS")
 
 print("\nAll Step 11C approval-execution tests passed.")
