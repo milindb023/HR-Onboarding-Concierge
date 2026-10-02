@@ -5,6 +5,12 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
+from .approval_interrupt import approval_interrupt_node
+from .approval_node import approval_request_node
+from .approval_routing import route_approval
+from .approval_execute import execute_approved_write
+
+from .approval_complete import approval_complete_node
 
 from .state import HRState
 from .tools.hr_tools import (
@@ -506,6 +512,11 @@ builder.add_node("synthesizer", synthesizer_node)
 builder.add_node("write_request", write_request_node)
 builder.add_node("severity", severity_node)
 builder.add_node("write_draft", write_draft_node)
+builder.add_node("approval_request", approval_request_node)
+builder.add_node("approval_interrupt", approval_interrupt_node)
+builder.add_node("approval_execute", execute_approved_write)
+builder.add_node("approval_complete", approval_complete_node)
+
 
 builder.add_node("paperwork_specialist", paperwork_graph)
 builder.add_node("access_specialist", access_graph)
@@ -560,7 +571,21 @@ builder.add_edge("payroll_specialist", "synthesizer")
 builder.add_edge("synthesizer", "write_request")
 builder.add_edge("write_request", "severity")
 builder.add_edge("severity", "write_draft")
-builder.add_edge("write_draft", "agent")
+builder.add_edge("write_draft", "approval_request")
+builder.add_edge("approval_request", "approval_interrupt")
+builder.add_conditional_edges(
+    "approval_interrupt",
+    route_approval,
+    {
+        "approved": "approval_execute",
+        "denied": "approval_complete",
+        "pending": "approval_interrupt",
+        "not_required": "agent",
+    },
+)
+
+builder.add_edge("approval_execute", "approval_complete")
+builder.add_edge("approval_complete", END)
 
 # agent -> tools / end / escalate
 builder.add_conditional_edges(
