@@ -29,6 +29,10 @@ from .supervisor import supervisor_node
 from .parallel import build_parallel_sends
 from .synthesizer import synthesizer_node
 
+from .severity_node import severity_node
+from .write_draft_node import write_draft_node
+from .write_request_node import write_request_node
+
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
 
@@ -499,6 +503,9 @@ builder.add_node("classify", classify_node)
 builder.add_node("supervisor", supervisor_node)
 builder.add_node("parallel_dispatch", lambda state: {})
 builder.add_node("synthesizer", synthesizer_node)
+builder.add_node("write_request", write_request_node)
+builder.add_node("severity", severity_node)
+builder.add_node("write_draft", write_draft_node)
 
 builder.add_node("paperwork_specialist", paperwork_graph)
 builder.add_node("access_specialist", access_graph)
@@ -550,7 +557,10 @@ builder.add_edge("access_specialist", "synthesizer")
 builder.add_edge("benefits_specialist", "synthesizer")
 builder.add_edge("payroll_specialist", "synthesizer")
 
-builder.add_edge("synthesizer", "agent")
+builder.add_edge("synthesizer", "write_request")
+builder.add_edge("write_request", "severity")
+builder.add_edge("severity", "write_draft")
+builder.add_edge("write_draft", "agent")
 
 # agent -> tools / end / escalate
 builder.add_conditional_edges(

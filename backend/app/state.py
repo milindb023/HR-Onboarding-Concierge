@@ -40,6 +40,9 @@ class HRState(TypedDict, total=False):
     payroll_question: str
 
     # Step 10 - Gated write access
+    employee_id: str
+    requested_system: str
+    write_request_valid: bool
     severity: str
     write_draft: dict[str, str]
     write_idempotency_key: str
