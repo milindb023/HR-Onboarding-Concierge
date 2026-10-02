@@ -26,6 +26,8 @@ from .specialists import (
 )
 
 from .supervisor import supervisor_node
+from .parallel import build_parallel_sends
+from .synthesizer import synthesizer_node
 
 MAX_ITERATIONS = 5
 MAX_DUPLICATE_TOOL_CALLS = 2
@@ -495,6 +497,8 @@ builder.add_node("guardrail", guardrail_node)
 builder.add_node("classify", classify_node)
 
 builder.add_node("supervisor", supervisor_node)
+builder.add_node("parallel_dispatch", lambda state: {})
+builder.add_node("synthesizer", synthesizer_node)
 
 builder.add_node("paperwork_specialist", paperwork_graph)
 builder.add_node("access_specialist", access_graph)
@@ -528,10 +532,10 @@ builder.add_conditional_edges(
     "supervisor",
     route_supervisor,
     {
-        "PAPERWORK": "paperwork_specialist",
-        "ACCESS": "access_specialist",
-        "BENEFITS": "benefits_specialist",
-        "PAYROLL": "payroll_specialist",
+        "PAPERWORK": "parallel_dispatch",
+        "ACCESS": "parallel_dispatch",
+        "BENEFITS": "parallel_dispatch",
+        "PAYROLL": "parallel_dispatch",
         "FINISH": END,
     },
 )
