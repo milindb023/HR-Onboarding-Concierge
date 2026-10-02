@@ -9,19 +9,29 @@ Severity = Literal[
 ]
 
 
-# Provisioning is allowed only for requests that are
-# explicitly classified as LOW or MEDIUM severity.
-ALLOWED_PROVISIONING_SEVERITIES = {
-    "LOW",
-    "MEDIUM",
+SEVERITY_LEVELS = {
+    "LOW": 1,
+    "MEDIUM": 2,
+    "HIGH": 3,
+    "CRITICAL": 4,
 }
 
 
-def can_provision(severity: str) -> bool:
+WRITE_DRAFT_MIN_SEVERITY = "MEDIUM"
+
+
+def should_create_write_draft(severity: str) -> bool:
     """
-    Determine whether a request is allowed to proceed
-    to the provisioning operation.
+    Return True only when severity reaches the
+    configured write-draft threshold.
     """
+
     normalized = severity.strip().upper()
 
-    return normalized in ALLOWED_PROVISIONING_SEVERITIES
+    if normalized not in SEVERITY_LEVELS:
+        return False
+
+    return (
+        SEVERITY_LEVELS[normalized]
+        >= SEVERITY_LEVELS[WRITE_DRAFT_MIN_SEVERITY]
+    )

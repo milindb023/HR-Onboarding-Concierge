@@ -32,12 +32,18 @@ class HRState(TypedDict, total=False):
    # Step 7 - Specialist findings
     specialist_findings: Annotated[list[str], operator.add]
     specialists_completed: bool
-    
+
     # Step 9 - Parallel specialist inputs
     paperwork_question: str
     access_question: str
     benefits_question: str
     payroll_question: str
+
+    # Step 10 - Gated write access
+    severity: str
+    write_draft: dict[str, str]
+    write_idempotency_key: str
+    write_result: str
 
     # Step 8 - Supervisor / dispatcher
     delegation_count: int
