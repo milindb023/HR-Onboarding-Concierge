@@ -6,7 +6,12 @@ from pydantic import BaseModel, Field
 
 from .graph import graph
 from .persistence import checkpointer
-
+from .forensics import (
+    apply_correction,
+    find_bad_checkpoint,
+    state_forensics,
+    time_travel,
+)
 
 app = FastAPI(
     title="HR Onboarding Concierge",
@@ -23,6 +28,25 @@ class EditApprovalRequest(BaseModel):
     employee_id: str = Field(min_length=1)
     system: str = Field(min_length=1)
 
+class ForensicsRequest(BaseModel):
+    thread_id: str = Field(min_length=1)
+
+
+class FindBadCheckpointRequest(BaseModel):
+    thread_id: str = Field(min_length=1)
+    field: str = Field(min_length=1)
+    bad_value: Any
+
+
+class ApplyCorrectionRequest(BaseModel):
+    thread_id: str = Field(min_length=1)
+    checkpoint_config: dict[str, Any]
+    updates: dict[str, Any]
+
+
+class TimeTravelRequest(BaseModel):
+    thread_id: str = Field(min_length=1)
+    checkpoint_id: str = Field(min_length=1)
 
 @app.get("/health")
 def health() -> dict[str, str]:
@@ -58,7 +82,67 @@ def pending_approvals() -> list[dict[str, Any]]:
 
     return results
 
+@app.post("/forensics")
+def get_forensics(request: ForensicsRequest) -> dict[str, Any]:
+    try:
+        timeline = state_forensics(request.thread_id)
+        return {
+            "thread_id": request.thread_id,
+            "timeline": timeline,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
+@app.post("/forensics/find-bad-checkpoint")
+def find_bad_checkpoint_endpoint(
+    request: FindBadCheckpointRequest,
+) -> dict[str, Any]:
+    try:
+        result = find_bad_checkpoint(
+            request.thread_id,
+            request.field,
+            request.bad_value,
+        )
+
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No checkpoint containing the requested bad value was found.",
+            )
+
+        return result
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/forensics/apply-correction")
+def apply_correction_endpoint(
+    request: ApplyCorrectionRequest,
+) -> dict[str, Any]:
+    try:
+        return apply_correction(
+            request.thread_id,
+            request.checkpoint_config,
+            request.updates,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/forensics/time-travel")
+def time_travel_endpoint(
+    request: TimeTravelRequest,
+) -> dict[str, Any]:
+    try:
+        return time_travel(
+            request.thread_id,
+            request.checkpoint_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    
 def resume_approval(
     thread_id: str,
     resume_value: dict[str, Any],
@@ -156,3 +240,4 @@ def edit_and_approve(
             "system": request.system,
         },
     )
+
