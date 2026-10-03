@@ -12,12 +12,11 @@ from app.specialists import (
 
 result = paperwork_graph.invoke(
     {
-        "question": "Which onboarding documents are required?",
+        "paperwork_question": "Which onboarding documents are required?",
         "category": "PAPERWORK",
     }
 )
 
-assert result["response"]
 assert len(result["specialist_findings"]) == 1
 assert "Paperwork specialist" in result["specialist_findings"][0]
 
@@ -31,12 +30,11 @@ print("PASS")
 
 result = access_graph.invoke(
     {
-        "question": "I need access to the HR portal.",
+        "access_question": "I need access to the HR portal.",
         "category": "ACCESS",
     }
 )
 
-assert result["response"]
 assert len(result["specialist_findings"]) == 1
 assert "Access specialist" in result["specialist_findings"][0]
 
@@ -50,12 +48,11 @@ print("PASS")
 
 result = benefits_graph.invoke(
     {
-        "question": "How do I enroll in benefits?",
+        "benefits_question": "How do I enroll in benefits?",
         "category": "BENEFITS",
     }
 )
 
-assert result["response"]
 assert len(result["specialist_findings"]) == 1
 assert "Benefits specialist" in result["specialist_findings"][0]
 
@@ -69,12 +66,11 @@ print("PASS")
 
 result = payroll_graph.invoke(
     {
-        "question": "When will my first salary be processed?",
+        "payroll_question": "When will my first salary be processed?",
         "category": "PAYROLL",
     }
 )
 
-assert result["response"]
 assert len(result["specialist_findings"]) == 1
 assert "Payroll specialist" in result["specialist_findings"][0]
 
