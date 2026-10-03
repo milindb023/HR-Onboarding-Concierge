@@ -76,3 +76,28 @@ HR-Onboarding-Concierge/
 |-- .gitignore
 |-- requirements.txt
 `-- README.md
+
+## Run the application
+
+The project uses Python 3.13.15. From the project root, activate the virtual environment and start the FastAPI server:
+
+```powershell
+.\.venv\Scripts\activate
+uvicorn backend.app.main:app --reload
+```
+
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) for the minimal browser interface.
+
+## API endpoints
+
+- `GET /` serves the browser UI.
+- `POST /run` runs an onboarding request for a thread.
+- `POST /stream` streams graph state updates as server-sent events.
+- `GET /pending-approvals` lists pending approval requests.
+- `POST /approve` approves a pending request.
+- `POST /deny` denies a pending request.
+- `POST /edit-and-approve` submits edited employee and system values for approval.
+- `POST /forensics` returns a thread's checkpoint timeline.
+- `POST /forensics/find-bad-checkpoint` locates a checkpoint containing a specified value.
+- `POST /forensics/apply-correction` applies a correction to a checkpoint.
+- `POST /forensics/time-travel` resumes execution from a selected checkpoint.

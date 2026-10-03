@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR Onboarding Concierge</title>
+  <style>
+    body{font:16px system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;color:#17202a;background:#f5f7fa}
+    section{background:white;padding:1rem 1.25rem;margin:1rem 0;border:1px solid #dce2e8;border-radius:8px}
+    label{display:block;margin:.7rem 0} input,textarea,button{font:inherit;padding:.5rem;max-width:100%}
+    input,textarea{box-sizing:border-box;width:100%} textarea{min-height:90px} button{cursor:pointer;margin:.25rem}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f5f7;padding:.75rem}
+    #approval{display:none}
+  </style>
+</head>
+<body>
+  <h1>HR Onboarding Concierge</h1>
+  <section>
+    <h2>Run a request</h2>
+    <label>Thread ID <input id="thread" value="onboarding-demo"></label>
+    <label>Question <textarea id="question" placeholder="Ask an HR onboarding question"></textarea></label>
+    <button id="run">Run Request</button>
+    <pre id="result">Response and graph state will appear here.</pre>
+  </section>
+  <section id="approval">
+    <h2>Approval</h2>
+    <pre id="approvalInfo"></pre>
+    <button data-action="approve">Approve</button><button data-action="deny">Deny</button>
+    <label>Employee ID <input id="employee" placeholder="EMP1001"></label>
+    <label>System <input id="system" placeholder="HR_PORTAL"></label>
+    <button data-action="edit-and-approve">Edit &amp; Approve</button>
+  </section>
+  <section>
+    <h2>Pending approvals</h2>
+    <button id="refresh">Refresh Pending Approvals</button><pre id="pending"></pre>
+  </section>
+  <section>
+    <h2>Forensics</h2>
+    <label>Thread ID <input id="forensicThread"></label>
+    <button id="forensics">Load Forensics</button><pre id="forensicResult"></pre>
+  </section>
+<script>
+const $ = id => document.getElementById(id);
+const threadId = () => $('thread').value.trim();
+const show = (id, data) => $(id).textContent = JSON.stringify(data, null, 2);
+async function api(path, body) {
+  const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: body ? {'Content-Type':'application/json'} : {}, body: body ? JSON.stringify(body) : undefined});
+  const text = await response.text();
+  let data;
+  try { data = text ? JSON.parse(text) : null; }
+  catch { data = null; }
+  if (!response.ok) {
+    const detail = data && (data.detail || data.error);
+    throw new Error(detail || text.trim() || `Request failed (${response.status} ${response.statusText})`);
+  }
+  if (data === null) throw new Error(`Server returned an empty or invalid JSON response (${response.status}).`);
+  return data;
+}
+function setApproval(data) {
+  $('approval').style.display = data && data.approval_status === 'PENDING' ? 'block' : 'none';
+  if (data && data.approval_status === 'PENDING') show('approvalInfo', data);
+}
+async function refreshPending() { try { show('pending', await api('/pending-approvals')); } catch(e) { show('pending', {error:e.message}); } }
+$('run').onclick = async () => {
+  try {
+    const data = await api('/run', {thread_id:threadId(), question:$('question').value});
+    show('result', data); setApproval(data); $('forensicThread').value = threadId(); await refreshPending();
+  } catch(e) { show('result', {error:e.message}); }
+};
+document.querySelectorAll('[data-action]').forEach(button => button.onclick = async () => {
+  const action = button.dataset.action;
+  const body = {thread_id:threadId()};
+  if (action === 'edit-and-approve') Object.assign(body, {employee_id:$('employee').value, system:$('system').value});
+  try { const data = await api('/' + action, body); show('result', data); setApproval(data); await refreshPending(); }
+  catch(e) { show('result', {error:e.message}); }
+});
+$('refresh').onclick = refreshPending;
+$('forensics').onclick = async () => { try { show('forensicResult', await api('/forensics', {thread_id:$('forensicThread').value.trim()})); } catch(e) { show('forensicResult', {error:e.message}); } };
+refreshPending();
+</script>
+</body>
+</html>

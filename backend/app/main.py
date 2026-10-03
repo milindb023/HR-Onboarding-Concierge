@@ -1,10 +1,15 @@
-from typing import Any
+import json
+from pathlib import Path
+from typing import Any, Iterator
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from langchain_google_genai.chat_models import GoogleRateLimitError
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-from .graph import graph
+from .graph import graph, run_ticket, stream_ticket
 from .persistence import checkpointer
 from .forensics import (
     apply_correction,
@@ -17,6 +22,77 @@ app = FastAPI(
     title="HR Onboarding Concierge",
     version="1.0.0",
 )
+
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+class RunRequest(BaseModel):
+    question: str = Field(min_length=1)
+    thread_id: str = Field(min_length=1)
+
+
+@app.get("/")
+def index():
+    from fastapi.responses import FileResponse
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.post("/run")
+def run(request: RunRequest) -> dict[str, Any]:
+    try:
+        state = run_ticket(request.question, request.thread_id)
+    except GoogleRateLimitError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The Gemini request quota is exhausted. Check the configured "
+                "Gemini project quota and retry when capacity is available."
+            ),
+        ) from exc
+    keys = ("category", "response", "approval_required", "approval_status",
+            "approval_id", "write_draft", "write_result")
+    return {"thread_id": request.thread_id, "question": request.question,
+            **{key: state.get(key) for key in keys}}
+
+
+_STREAM_FIELDS = ("category", "response", "approval_required", "approval_status",
+                  "approval_id", "write_draft", "write_result", "iteration_count", "escalated")
+
+
+def _json_safe(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): converted for k, v in value.items()
+                if (converted := _json_safe(v)) is not _UNSERIALIZABLE}
+    if isinstance(value, (list, tuple)):
+        return [converted for item in value
+                if (converted := _json_safe(item)) is not _UNSERIALIZABLE]
+    return _UNSERIALIZABLE
+
+
+_UNSERIALIZABLE = object()
+
+
+def serialize_stream_state(state: dict[str, Any]) -> dict[str, Any]:
+    serialized = {}
+    for key in _STREAM_FIELDS:
+        value = _json_safe(state.get(key))
+        if value is _UNSERIALIZABLE:
+            value = None
+        serialized[key] = value
+    return serialized
+
+
+@app.post("/stream")
+def stream(request: RunRequest) -> StreamingResponse:
+    def events() -> Iterator[str]:
+        for state in stream_ticket(request.question, request.thread_id):
+            payload = serialize_stream_state(state)
+            payload.update(thread_id=request.thread_id, question=request.question)
+            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 class ApprovalRequest(BaseModel):
